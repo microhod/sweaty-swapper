@@ -1,5 +1,69 @@
 package sportstracker
 
+import (
+	"errors"
+	"fmt"
+	"time"
+
+	"github.com/microhod/sweaty-swapper/internal/domain"
+)
+
+const activityIDSource = "sportstracker"
+
+var ErrActivityNotSupported = errors.New("activity type not supported")
+
+type Workout struct {
+	Key         string   `json:"workoutKey"`
+	Activity    Activity `json:"activityId"`
+	Created     int64    `json:"created"`
+	Description string   `json:"description"`
+	Photos      []Photo  `json:"photos"`
+	Videos      []Video  `json:"videos"`
+	GPX         GPX      `json:"gpx"`
+}
+
+func (w Workout) ToActivity() (domain.Activity, error) {
+	activityType, err := w.Activity.ToActivityType()
+	if err != nil {
+		return domain.Activity{}, fmt.Errorf("converting activity to domain activity type: %w", err)
+	}
+	createdAt := time.UnixMilli(w.Created)
+
+	activity := domain.Activity{
+		ID: domain.ActivityID{
+			Source: activityIDSource,
+			ID:     w.Key,
+		},
+		Type: activityType,
+		Description: w.Description,
+		CreatedAt: createdAt,
+		Route: domain.Route{
+			Type: domain.RouteTypeGpx,
+			Data: w.GPX,
+		},
+	}
+	activity.Title = activity.DefaultTitle()
+
+	return activity, nil
+}
+
+type Photo struct {
+	Key    string `json:"key"`
+	URL    string `json:"url"`
+	Height int    `json:"height"`
+	Width  int    `json:"width"`
+}
+
+type Video struct {
+	Key          string `json:"key"`
+	URL          string `json:"url"`
+	ThumbnailURL string `json:"thumbnailUrl"`
+	Height       int    `json:"height"`
+	Width        int    `json:"width"`
+}
+
+type GPX []byte
+
 type Activity int
 
 const (
@@ -103,3 +167,21 @@ const (
 	ActivityTransition         Activity = 98
 	ActivityGravelCycling      Activity = 99
 )
+
+var activityToActivityType = map[Activity]domain.ActivityType{
+	ActivityRunning: domain.ActivityTypeRunning,
+	ActivityWalking: domain.ActivityTypeWalking,
+	ActivityHiking:  domain.ActivityTypeHiking,
+	ActivityCycling: domain.ActivityTypeCycling,
+	ActivityGym:     domain.ActivityTypeGym,
+	ActivityYoga:    domain.ActivityTypeYoga,
+}
+
+func (a Activity) ToActivityType() (domain.ActivityType, error) {
+	activityType, exists := activityToActivityType[a]
+	if !exists {
+		return "", fmt.Errorf("%w: [%d]", ErrActivityNotSupported, a)
+	}
+
+	return activityType, nil
+}

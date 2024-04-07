@@ -1,23 +1,33 @@
 package domain
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+	"time"
+)
 
-type ActivityType int
+type ActivityType string
 
 const (
-	ActivityTypeRunning ActivityType = iota
-	ActivityTypeWalking
-	ActivityTypeHiking
-	ActivityTypeCycling
-	ActivityTypeGym
-	ActivityTypeYoga
+	ActivityTypeRunning ActivityType = "running"
+	ActivityTypeWalking ActivityType = "walking"
+	ActivityTypeHiking  ActivityType = "hiking"
+	ActivityTypeCycling ActivityType = "cycling"
+	ActivityTypeGym     ActivityType = "gym"
+	ActivityTypeYoga    ActivityType = "yoga"
 )
 
 type Activity struct {
-	ID          ActivityID `json:"id"`
-	Title       string     `json:"title"`
-	Description string     `json:"description"`
-	Route       Route      `json:"route"`
+	ID          ActivityID   `json:"id"`
+	Type        ActivityType `json:"type"`
+	Title       string       `json:"title"`
+	Description string       `json:"description"`
+	CreatedAt   time.Time    `json:"created_at"`
+	Route       Route        `json:"route"`
+}
+
+func (a Activity) DefaultTitle() string {
+	return strings.ToUpper(string(a.Type))
 }
 
 type ActivityID struct {

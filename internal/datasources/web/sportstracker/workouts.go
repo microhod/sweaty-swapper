@@ -2,46 +2,54 @@ package sportstracker
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+
+	"github.com/microhod/sweaty-swapper/internal/domain"
 )
 
-const defaultWorkoutsPageSize = 50
-
-type WorkoutClient struct {
-	client   httpClient
-	pageSize int
-}
-
-func (w *WorkoutClient) ListWorkouts() ([]Workout, error) {
+func (c *Client) ListActivities(ctx context.Context) ([]domain.Activity, error) {
 	var workouts []Workout
 	var offset int
 
 	var err error
 	for err == nil {
 		var page []Workout
-		page, err = w.getWorkoutsPage(w.pageSize, offset)
+		page, err = c.getWorkoutsPage(ctx, c.pageSize, offset)
 
 		workouts = append(workouts, page...)
-		offset += w.pageSize
+		offset += c.pageSize
 	}
 	if !errors.Is(err, io.EOF) {
-		return nil, fmt.Errorf("failed to list workouts: %w", err)
+		return nil, fmt.Errorf("listing workouts: %w", err)
 	}
 
-	return w.attachGPX(workouts)
-}
-
-func (w *WorkoutClient) getWorkoutsPage(limit, offset int) ([]Workout, error) {
-	url, err := url.JoinPath(apiserverURL, "/v1/workouts")
+	err = c.attachGPX(ctx, workouts)
 	if err != nil {
 		return nil, err
 	}
-	request, err := http.NewRequest(http.MethodGet, url, nil)
+
+	activities := make([]domain.Activity, len(workouts))
+	for i, workout := range workouts {
+		activities[i], err = workout.ToActivity()
+		if err != nil {
+			return nil, fmt.Errorf("converting to domain activity: %w", err)
+		}
+	}
+	return activities, nil
+}
+
+func (c *Client) getWorkoutsPage(ctx context.Context, limit, offset int) ([]Workout, error) {
+	url, err := url.JoinPath(c.baseURL, "/v1/workouts")
+	if err != nil {
+		return nil, err
+	}
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +60,7 @@ func (w *WorkoutClient) getWorkoutsPage(limit, offset int) ([]Workout, error) {
 	query.Add("offset", fmt.Sprint(offset))
 	request.URL.RawQuery = query.Encode()
 
-	response, err := w.client.Do(request)
+	response, err := c.client.Do(request)
 	if err != nil {
 		return nil, err
 	}
@@ -75,55 +83,28 @@ type workoutsResponse struct {
 	Payload []Workout `json:"payload"`
 }
 
-type Workout struct {
-	Key         string   `json:"workoutKey"`
-	Activity    Activity `json:"activityId"`
-	Created     Datetime `json:"created"`
-	Description string   `json:"description"`
-	Photos      []Photo  `json:"photos"`
-	Videos      []Video  `json:"videos"`
-	GPX         GPX      `json:"gpx"`
-}
-
-type Photo struct {
-	Key          string `json:"key"`
-	URL          string `json:"url"`
-	Height       int    `json:"height"`
-	Width        int    `json:"width"`
-}
-
-type Video struct {
-	Key          string `json:"key"`
-	URL          string `json:"url"`
-	ThumbnailURL string `json:"thumbnailUrl"`
-	Height       int    `json:"height"`
-	Width        int    `json:"width"`
-}
-
-type GPX []byte
-
-func (w *WorkoutClient) attachGPX(workouts []Workout) ([]Workout, error) {
+func (c *Client) attachGPX(ctx context.Context, workouts []Workout) error {
 	for i, workout := range workouts {
-		gpx, err := w.ExportGPX(workout)
+		gpx, err := c.exportGPX(ctx, workout)
 		if err != nil {
-			return nil, err
+			return fmt.Errorf("attaching GPX to workout [%s]: %w", workout.Key, err)
 		}
 		workouts[i].GPX = gpx
 	}
-	return workouts, nil
+	return nil
 }
 
-func (w *WorkoutClient) ExportGPX(workout Workout) (GPX, error) {
-	url, err := url.JoinPath(apiserverURL, "/v1/workout/exportGpx", workout.Key)
+func (c *Client) exportGPX(ctx context.Context, workout Workout) (GPX, error) {
+	url, err := url.JoinPath(c.baseURL, "/v1/workout/exportGpx", workout.Key)
 	if err != nil {
 		return nil, err
 	}
-	request, err := http.NewRequest(http.MethodGet, url, nil)
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	response, err := w.client.Do(request)
+	response, err := c.client.Do(request)
 	if err != nil {
 		return nil, err
 	}

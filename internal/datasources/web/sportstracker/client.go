@@ -4,37 +4,39 @@ import (
 	"net/http"
 )
 
-const apiserverURL = "https://api.sports-tracker.com/apiserver"
-
 type Client struct {
-	sessionToken string
-	client       httpClient
+	client   *http.Client
+	baseURL  string
+	pageSize int
 }
 
-type httpClient interface {
-	Do(r *http.Request) (*http.Response, error)
+type ClientOptions struct {
+	BaseURL      string
+	SessionToken string
+	PageSize     int
 }
 
-func NewClient(sessionToken string) *Client {
-	return &Client{
-		sessionToken: sessionToken,
-		client:       http.DefaultClient,
+type ClientOptionFunc func(*ClientOptions)
+
+var defaultClientOptions = ClientOptions{
+	BaseURL:  "https://api.sports-tracker.com/apiserver",
+	PageSize: 50,
+}
+
+func NewClient(client *http.Client, optionFuncs ...ClientOptionFunc) *Client {
+	options := defaultClientOptions
+	for _, o := range optionFuncs {
+		o(&options)
 	}
-}
 
-func (c *Client) Do(r *http.Request) (*http.Response, error) {
-	r.Header.Add("Sttauthorization", c.sessionToken)
-
-	query := r.URL.Query()
-	query.Add("token", c.sessionToken)
-	r.URL.RawQuery = query.Encode()
-
-	return c.client.Do(r)
-}
-
-func (c *Client) Workouts() *WorkoutClient {
-	return &WorkoutClient{
-		client:   c,
-		pageSize: defaultWorkoutsPageSize,
+	transport := client.Transport
+	client.Transport = &sessionTokenRoundTripper{
+		token: options.SessionToken,
+		next:  transport,
+	}
+	return &Client{
+		client:  client,
+		baseURL: options.BaseURL,
+		pageSize: options.PageSize,
 	}
 }
