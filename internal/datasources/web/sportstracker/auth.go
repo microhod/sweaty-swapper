@@ -7,6 +7,17 @@ type sessionTokenRoundTripper struct {
 	next  http.RoundTripper
 }
 
+func addSessionTokenAuth(client *http.Client, sessionToken string) {
+	transport := client.Transport
+	if transport == nil {
+		transport = http.DefaultTransport
+	}
+	client.Transport = &sessionTokenRoundTripper{
+		token: sessionToken,
+		next:  transport,
+	}
+}
+
 func (s *sessionTokenRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 	r.Header.Add("Sttauthorization", s.token)
 
@@ -14,6 +25,5 @@ func (s *sessionTokenRoundTripper) RoundTrip(r *http.Request) (*http.Response, e
 	query.Add("token", s.token)
 	r.URL.RawQuery = query.Encode()
 
-	// TODO: change this back to a "do" method as this doesn't work for some reason?
 	return s.next.RoundTrip(r)
 }

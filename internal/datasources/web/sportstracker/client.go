@@ -28,12 +28,8 @@ func NewClient(client *http.Client, optionFuncs ...ClientOptionFunc) *Client {
 	for _, o := range optionFuncs {
 		o(&options)
 	}
+	addSessionTokenAuth(client, options.SessionToken)
 
-	transport := client.Transport
-	client.Transport = &sessionTokenRoundTripper{
-		token: options.SessionToken,
-		next:  transport,
-	}
 	return &Client{
 		client:  client,
 		baseURL: options.BaseURL,
