@@ -2,23 +2,24 @@ package domain
 
 import (
 	"fmt"
-	"strings"
 	"time"
+
+	"github.com/microhod/sweaty-swapper/pkg/strings"
 )
 
 type ActivityType string
 
 const (
-	ActivityTypeRunning ActivityType = "running"
-	ActivityTypeWalking ActivityType = "walking"
-	ActivityTypeHiking  ActivityType = "hiking"
-	ActivityTypeCycling ActivityType = "cycling"
-	ActivityTypeGym     ActivityType = "gym"
-	ActivityTypeYoga    ActivityType = "yoga"
+	ActivityTypeRun   ActivityType = "run"
+	ActivityTypeWalk  ActivityType = "walk"
+	ActivityTypeHike  ActivityType = "hike"
+	ActivityTypeCycle ActivityType = "cycle"
+	ActivityTypeGym   ActivityType = "gym"
+	ActivityTypeYoga  ActivityType = "yoga"
 )
 
 type Activity struct {
-	ID          ActivityID   `json:"id"`
+	IDs         ActivityIDs  `json:"ids"`
 	Type        ActivityType `json:"type"`
 	Title       string       `json:"title"`
 	Description string       `json:"description"`
@@ -26,15 +27,26 @@ type Activity struct {
 	Route       Route        `json:"route"`
 }
 
+type ActivityIDs map[Platform]string
+
+// Platform is the name of the service storing the activity data e.g. strava.com
+// can be any string e.g. domain name might be a sensible choice if the platform has a website
+type Platform string
+
 func (a Activity) DefaultTitle() string {
-	return strings.ToUpper(string(a.Type))
-}
+	var timeOfDay string
 
-type ActivityID struct {
-	Source string
-	ID     string
-}
+	hour := a.CreatedAt.Hour()
+	switch {
+	case hour < 12:
+		timeOfDay = "Morning"
+	case hour < 14:
+		timeOfDay = "Lunch"
+	case hour < 18:
+		timeOfDay = "Afternoon"
+	default:
+		timeOfDay = "Evening"
+	}
 
-func (id ActivityID) MarshalText() ([]byte, error) {
-	return []byte(fmt.Sprintf("%s:%s", id.Source, id.ID)), nil
+	return fmt.Sprintf("%s %s", timeOfDay, strings.ToTitleCase(string(a.Type)))
 }

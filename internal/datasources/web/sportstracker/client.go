@@ -20,7 +20,7 @@ type ClientOptionFunc func(*ClientOptions)
 
 var defaultClientOptions = ClientOptions{
 	BaseURL:  "https://api.sports-tracker.com/apiserver",
-	PageSize: 50,
+	PageSize: 100,
 }
 
 func NewClient(client *http.Client, optionFuncs ...ClientOptionFunc) *Client {

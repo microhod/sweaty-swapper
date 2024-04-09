@@ -8,7 +8,9 @@ import (
 	"github.com/microhod/sweaty-swapper/internal/domain"
 )
 
-const activityIDSource = "sportstracker"
+// platform is the key used for IDs from sports-tracker.com
+// changing this is a breaking change
+const platform domain.Platform = "sports-tracker.com"
 
 var ErrActivityNotSupported = errors.New("activity type not supported")
 
@@ -27,12 +29,15 @@ func (w Workout) ToActivity() (domain.Activity, error) {
 	if err != nil {
 		return domain.Activity{}, fmt.Errorf("converting activity to domain activity type: %w", err)
 	}
+	
+	// Note: This doesn't handle user timezones, it just assumes system local timezone
+	// There is a GET /v1/user/settings endpoint which has a 'payload.timezone' field which could be useful
+	// but for me it's just null, so I have no knowledge on the format of that field when not null.
 	createdAt := time.UnixMilli(w.Created)
 
 	activity := domain.Activity{
-		ID: domain.ActivityID{
-			Source: activityIDSource,
-			ID:     w.Key,
+		IDs: domain.ActivityIDs{
+			platform: w.Key,
 		},
 		Type: activityType,
 		Description: w.Description,
@@ -42,7 +47,6 @@ func (w Workout) ToActivity() (domain.Activity, error) {
 			Data: w.GPX,
 		},
 	}
-	activity.Title = activity.DefaultTitle()
 
 	return activity, nil
 }
@@ -169,10 +173,10 @@ const (
 )
 
 var activityToActivityType = map[Activity]domain.ActivityType{
-	ActivityRunning: domain.ActivityTypeRunning,
-	ActivityWalking: domain.ActivityTypeWalking,
-	ActivityHiking:  domain.ActivityTypeHiking,
-	ActivityCycling: domain.ActivityTypeCycling,
+	ActivityRunning: domain.ActivityTypeRun,
+	ActivityWalking: domain.ActivityTypeWalk,
+	ActivityHiking:  domain.ActivityTypeHike,
+	ActivityCycling: domain.ActivityTypeCycle,
 	ActivityGym:     domain.ActivityTypeGym,
 	ActivityYoga:    domain.ActivityTypeYoga,
 }
