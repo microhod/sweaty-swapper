@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<gpx xmlns="http://www.topografix.com/GPX/1/1" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" creator="Sports Tracker" version="1.1" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd http://www.garmin.com/xmlschemas/TrackPointExtension/v1 http://www.garmin.com/xmlschemas/TrackPointExtensionv1.xsd">
+    <metadata>
+        <name>27/10/2019 16:02</name>
+        <desc>New personal best for 10k!</desc>
+        <author><name>Sam Hodgkinson</name></author>
+    </metadata>
+    <trk>
+        <name>27/10/2019 16:02</name>
+        <trkseg>
+            <trkpt lat="42.221607" lon="0.11549"><ele>66.6</ele><time>2019-10-27T16:02:19Z</time></trkpt>
+            <trkpt lat="72.22158" lon="0.11555"><ele>66.9</ele><time>2019-10-27T16:02:20Z</time></trkpt>
+        </trkseg>
+    </trk>
+</gpx>

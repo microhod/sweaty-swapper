@@ -111,6 +111,7 @@ func (c *Client) exportGPX(ctx context.Context, workout Workout) (GPX, error) {
 	if response.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("got non-OK status: %d", response.StatusCode)
 	}
+	defer response.Body.Close()
 
 	buffer := new(bytes.Buffer)
 	_, err = io.Copy(buffer, response.Body)

@@ -26,7 +26,7 @@ type Activity struct {
 	Description string        `json:"description"`
 	CreatedAt   time.Time     `json:"created_at"`
 	Stats       ActivityStats `json:"stats"`
-	Route       Route         `json:"route,omitempty"`
+	Route       Route         `json:"route"`
 }
 
 func (a Activity) DefaultTitle() string {

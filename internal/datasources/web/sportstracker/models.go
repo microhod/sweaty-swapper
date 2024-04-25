@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/microhod/sweaty-swapper/internal/datasources/file/gpx"
 	"github.com/microhod/sweaty-swapper/internal/domain"
 )
 
@@ -32,6 +33,11 @@ func (w Workout) ToActivity() (domain.Activity, error) {
 		return domain.Activity{}, fmt.Errorf("converting activity to domain activity type: %w", err)
 	}
 
+	route, err := gpx.ParseRoute(w.GPX)
+	if err != nil {
+		return domain.Activity{}, fmt.Errorf("parsing gpx route: %w", err)
+	}
+
 	// Note: This doesn't handle user timezones, it just assumes system local timezone
 	// There is a GET /v1/user/settings endpoint which has a 'payload.timezone' field which could be useful
 	// but for me it's just null, so I have no knowledge on the format of that field when not null.
@@ -48,7 +54,7 @@ func (w Workout) ToActivity() (domain.Activity, error) {
 			TotalTime:     domain.ActivityDuration(time.Second * time.Duration(w.TotalTimeSeconds)),
 			TotalDistance: domain.Meters(w.TotalDistanceMetres),
 		},
-		Route: domain.NewGPXRoute(w.GPX),
+		Route: route,
 	}
 
 	return activity, nil
