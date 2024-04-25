@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -19,19 +20,14 @@ const (
 )
 
 type Activity struct {
-	IDs         ActivityIDs  `json:"ids"`
-	Type        ActivityType `json:"type"`
-	Title       string       `json:"title"`
-	Description string       `json:"description"`
-	CreatedAt   time.Time    `json:"created_at"`
-	Route       Route        `json:"route"`
+	IDs         ActivityIDs   `json:"ids"`
+	Type        ActivityType  `json:"type"`
+	Title       string        `json:"title"`
+	Description string        `json:"description"`
+	CreatedAt   time.Time     `json:"created_at"`
+	Stats       ActivityStats `json:"stats"`
+	Route       Route         `json:"route,omitempty"`
 }
-
-type ActivityIDs map[Platform]string
-
-// Platform is the name of the service storing the activity data e.g. strava.com
-// can be any string e.g. domain name might be a sensible choice if the platform has a website
-type Platform string
 
 func (a Activity) DefaultTitle() string {
 	var timeOfDay string
@@ -50,3 +46,23 @@ func (a Activity) DefaultTitle() string {
 
 	return fmt.Sprintf("%s %s", timeOfDay, strings.ToTitleCase(string(a.Type)))
 }
+
+type ActivityIDs map[Platform]string
+
+// Platform is the name of the service storing the activity data e.g. strava.com
+// can be any string e.g. domain name might be a sensible choice if the platform has a website
+type Platform string
+
+type ActivityStats struct {
+	TotalTime     ActivityDuration
+	TotalDistance Meters
+}
+
+type ActivityDuration time.Duration
+
+func (ad ActivityDuration) MarshalJSON() ([]byte, error) {
+	return json.Marshal(time.Duration(ad).String())
+}
+
+// Meters is distance expressed in meters
+type Meters float64

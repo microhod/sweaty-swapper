@@ -15,13 +15,15 @@ const platform domain.Platform = "sports-tracker.com"
 var ErrActivityNotSupported = errors.New("activity type not supported")
 
 type Workout struct {
-	Key         string   `json:"workoutKey"`
-	Activity    Activity `json:"activityId"`
-	Created     int64    `json:"created"`
-	Description string   `json:"description"`
-	Photos      []Photo  `json:"photos"`
-	Videos      []Video  `json:"videos"`
-	GPX         GPX      `json:"gpx"`
+	Key                 string   `json:"workoutKey"`
+	Activity            Activity `json:"activityId"`
+	CreatedUnixMillis   int64    `json:"created"`
+	Description         string   `json:"description"`
+	TotalTimeSeconds    float64  `json:"totalTime"`
+	TotalDistanceMetres float64  `json:"totalDistance"`
+	Photos              []Photo  `json:"photos"`
+	Videos              []Video  `json:"videos"`
+	GPX                 GPX      `json:"gpx"`
 }
 
 func (w Workout) ToActivity() (domain.Activity, error) {
@@ -29,23 +31,24 @@ func (w Workout) ToActivity() (domain.Activity, error) {
 	if err != nil {
 		return domain.Activity{}, fmt.Errorf("converting activity to domain activity type: %w", err)
 	}
-	
+
 	// Note: This doesn't handle user timezones, it just assumes system local timezone
 	// There is a GET /v1/user/settings endpoint which has a 'payload.timezone' field which could be useful
 	// but for me it's just null, so I have no knowledge on the format of that field when not null.
-	createdAt := time.UnixMilli(w.Created)
+	createdAt := time.UnixMilli(w.CreatedUnixMillis)
 
 	activity := domain.Activity{
 		IDs: domain.ActivityIDs{
 			platform: w.Key,
 		},
-		Type: activityType,
+		Type:        activityType,
 		Description: w.Description,
-		CreatedAt: createdAt,
-		Route: domain.Route{
-			Type: domain.RouteTypeGpx,
-			Data: w.GPX,
+		CreatedAt:   createdAt,
+		Stats: domain.ActivityStats{
+			TotalTime:     domain.ActivityDuration(time.Second * time.Duration(w.TotalTimeSeconds)),
+			TotalDistance: domain.Meters(w.TotalDistanceMetres),
 		},
+		Route: domain.NewGPXRoute(w.GPX),
 	}
 
 	return activity, nil
