@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/microhod/sweaty-swapper/internal/datasources/file/gpx"
 	"github.com/microhod/sweaty-swapper/internal/domain"
 )
 
@@ -29,14 +30,12 @@ func (c *Client) ListActivities(ctx context.Context) ([]domain.Activity, error) 
 		return nil, fmt.Errorf("listing workouts: %w", err)
 	}
 
-	err = c.attachGPX(ctx, workouts)
-	if err != nil {
-		return nil, err
-	}
-
 	activities := make([]domain.Activity, len(workouts))
 	for i, workout := range workouts {
-		activities[i], err = workout.ToActivity()
+		// create lazy loaded route to speed up fetching initial activity info
+		route := gpx.NewLazyLoadedRoute(c.exportGpxFunc(workout))
+
+		activities[i], err = workout.toActivity(route)
 		if err != nil {
 			return nil, fmt.Errorf("converting to domain activity: %w", err)
 		}
@@ -83,37 +82,28 @@ type workoutsResponse struct {
 	Payload []Workout `json:"payload"`
 }
 
-func (c *Client) attachGPX(ctx context.Context, workouts []Workout) error {
-	for i, workout := range workouts {
-		gpx, err := c.exportGPX(ctx, workout)
+func (c *Client) exportGpxFunc(workout Workout) func(context.Context) ([]byte, error) {
+	return func(ctx context.Context) ([]byte, error) {
+		url, err := url.JoinPath(c.baseURL, "/v1/workout/exportGpx", workout.Key)
 		if err != nil {
-			return fmt.Errorf("attaching GPX to workout [%s]: %w", workout.Key, err)
+			return nil, err
 		}
-		workouts[i].GPX = gpx
-	}
-	return nil
-}
+		request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		if err != nil {
+			return nil, err
+		}
 
-func (c *Client) exportGPX(ctx context.Context, workout Workout) (GPX, error) {
-	url, err := url.JoinPath(c.baseURL, "/v1/workout/exportGpx", workout.Key)
-	if err != nil {
-		return nil, err
-	}
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, err
-	}
+		response, err := c.client.Do(request)
+		if err != nil {
+			return nil, err
+		}
+		if response.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("got non-OK status: %d", response.StatusCode)
+		}
+		defer response.Body.Close()
 
-	response, err := c.client.Do(request)
-	if err != nil {
-		return nil, err
+		buffer := new(bytes.Buffer)
+		_, err = io.Copy(buffer, response.Body)
+		return buffer.Bytes(), err
 	}
-	if response.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("got non-OK status: %d", response.StatusCode)
-	}
-	defer response.Body.Close()
-
-	buffer := new(bytes.Buffer)
-	_, err = io.Copy(buffer, response.Body)
-	return buffer.Bytes(), err
 }

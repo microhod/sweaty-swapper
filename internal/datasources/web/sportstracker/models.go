@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/microhod/sweaty-swapper/internal/datasources/file/gpx"
 	"github.com/microhod/sweaty-swapper/internal/domain"
 )
 
@@ -24,18 +23,12 @@ type Workout struct {
 	TotalDistanceMetres float64  `json:"totalDistance"`
 	Photos              []Photo  `json:"photos"`
 	Videos              []Video  `json:"videos"`
-	GPX                 GPX      `json:"gpx"`
 }
 
-func (w Workout) ToActivity() (domain.Activity, error) {
+func (w Workout) toActivity(route domain.Route) (domain.Activity, error) {
 	activityType, err := w.Activity.ToActivityType()
 	if err != nil {
 		return domain.Activity{}, fmt.Errorf("converting activity to domain activity type: %w", err)
-	}
-
-	route, err := gpx.ParseRoute(w.GPX)
-	if err != nil {
-		return domain.Activity{}, fmt.Errorf("parsing gpx route: %w", err)
 	}
 
 	// Note: This doesn't handle user timezones, it just assumes system local timezone
@@ -74,8 +67,6 @@ type Video struct {
 	Height       int    `json:"height"`
 	Width        int    `json:"width"`
 }
-
-type GPX []byte
 
 type Activity int
 

@@ -1,6 +1,7 @@
 package gpx
 
 import (
+	"context"
 	"embed"
 	"encoding/json"
 	"testing"
@@ -36,8 +37,10 @@ func TestRoute_Empty(t *testing.T) {
 
 			route, err := ParseRoute(xml)
 			require.NoError(t, err)
+			actual, err := route.Empty(context.Background())
+			require.NoError(t, err)
 
-			assert.Equal(t, tc.expected, route.Empty())
+			assert.Equal(t, tc.expected, actual)
 		})
 	}
 }

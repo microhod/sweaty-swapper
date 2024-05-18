@@ -1,9 +1,11 @@
 package domain
 
+import "context"
+
 type Route interface {
 	Type() RouteType
-	Data() ([]byte, error)
-	Empty() bool
+	Data(context.Context) ([]byte, error)
+	Empty(context.Context) (bool, error)
 }
 
 type RouteType int
